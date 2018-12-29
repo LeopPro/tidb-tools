@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/pingcap/errors"
 )
@@ -12,6 +13,7 @@ import (
 // It can restore from checkpoint and designed for append only file.
 // Don't worry about random write file, `Checker` will guarantee file consistency.
 type FileSlicer struct {
+	workDir     string
 	sliceStatus *sliceStatus
 }
 
@@ -28,13 +30,17 @@ type SliceInfo struct {
 	Length   int64
 }
 
+const SliceStatusFile = ".fu_slice_status"
+
 // NewFileSlicer creates a `FileSlicer` load from `statusFile`
-func NewFileSlicer(statusFile string, sliceSize int64) (*FileSlicer, error) {
+func NewFileSlicer(workDir string, sliceSize int64) (*FileSlicer, error) {
+	statusFile := filepath.Join(workDir, SliceStatusFile)
 	sliceStatus, err := loadSliceStatus(statusFile, sliceSize)
 	if err != nil {
 		return nil, errors.Annotate(err, "error thrown during load slice status")
 	}
 	return &FileSlicer{
+		workDir,
 		sliceStatus,
 	}, nil
 }
