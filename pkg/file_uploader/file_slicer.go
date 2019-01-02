@@ -52,26 +52,11 @@ func (s *Slice) writeTo(writer io.Writer) (int64, error) {
 	if ret != s.Offset {
 		return 0, errors.Errorf("seek file failed %#v", file)
 	}
-	buf := make([]byte, 1024)
-	var readLength int64
-	for {
-		if unreadLength := s.Length - readLength; unreadLength < 1024 {
-			buf = make([]byte, unreadLength)
-		}
-		n, err := file.Read(buf)
-		if err != nil && err != io.EOF {
-			return 0, errors.Annotatef(err, "read file failed %#v", file)
-		}
-		if 0 == n || readLength >= s.Length {
-			break
-		}
-		readLength += int64(n)
-		_, err = writer.Write(buf)
-		if err != nil {
-			return 0, errors.Annotatef(err, "write io.Writer failed %#v", file)
-		}
+	written, err := io.CopyN(writer, file, s.Length)
+	if err != nil {
+		return 0, errors.Annotate(err, "write io.Writer failed")
 	}
-	return readLength, nil
+	return written, nil
 }
 
 const SliceStatusFile = ".fu_slice_status"
