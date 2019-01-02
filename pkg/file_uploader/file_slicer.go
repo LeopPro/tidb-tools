@@ -2,6 +2,7 @@ package file_uploader
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 	"github.com/pingcap/errors"
 )
 
-// FileSlicer slices file into `SliceInfo`.
+// FileSlicer slices file into `Slice`.
 // It can restore from checkpoint and designed for append only file.
 // Don't worry about random write file, `Checker` will guarantee file consistency.
 type FileSlicer struct {
@@ -23,11 +24,54 @@ type sliceStatus struct {
 	SliceTotalSize map[string]int64 `json:"slice_total_size"`
 }
 
-type SliceInfo struct {
+type Slice struct {
 	FileName string
 	Index    int64
 	Offset   int64
 	Length   int64
+}
+
+func (s *Slice) isValid() bool {
+	fileInfo, err := os.Stat(s.FileName)
+	if err != nil || fileInfo.IsDir() || fileInfo.Size() < s.Offset+s.Length {
+		return false
+	}
+	return true
+}
+
+func (s *Slice) writeTo(writer io.Writer) (n, error) {
+	file, err := os.OpenFile(s.FileName, os.O_RDONLY, 0666)
+	if err != nil {
+		return 0, errors.Annotatef(err, "open file failed %#v", file)
+	}
+	defer file.Close()
+	ret, err := file.Seek(s.Offset, 0)
+	if err != nil {
+		return 0, errors.Annotatef(err, "seek file failed %#v", file)
+	}
+	if ret != s.Offset {
+		return 0, errors.Errorf("seek file failed %#v", file)
+	}
+	buf := make([]byte, 1024)
+	var readLength int64
+	for {
+		if unreadLength := s.Length - readLength; unreadLength < 1024 {
+			buf = make([]byte, unreadLength)
+		}
+		n, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			return 0, errors.Annotatef(err, "read file failed %#v", file)
+		}
+		if 0 == n || readLength >= s.Length {
+			break
+		}
+		readLength += int64(n)
+		_, err = writer.Write(buf)
+		if err != nil {
+			return 0, errors.Annotatef(err, "write io.Writer failed %#v", file)
+		}
+	}
+	return readLength, nil
 }
 
 const SliceStatusFile = ".fu_slice_status"
@@ -72,7 +116,7 @@ func (ss *sliceStatus) flush() error {
 	if err != nil {
 		return errors.Annotate(err, "error thrown during marshaling json")
 	}
-	statusFile, err := os.OpenFile(ss.statusFile, os.O_CREATE|os.O_RDWR|os.O_SYNC, 0666)
+	statusFile, err := os.OpenFile(ss.statusFile, os.O_CREATE|os.O_RDWR|os.O_SYNC, 0660)
 	if err != nil {
 		return errors.Annotate(err, "error thrown during open statusFile file")
 	}
@@ -84,21 +128,21 @@ func (ss *sliceStatus) flush() error {
 	return nil
 }
 
-// DoSlice slices `file` and returns SliceInfo Arrays.
-func (fs *FileSlicer) DoSlice(file os.FileInfo) ([]SliceInfo, error) {
+// DoSlice slices `file` and returns Slice Arrays.
+func (fs *FileSlicer) DoSlice(file os.FileInfo) ([]Slice, error) {
 	sliceSize := fs.sliceStatus.SliceSize
-	fileName := file.Name()
+	fileName := filepath.Join(fs.workDir, file.Name())
 	fileSize := file.Size()
 	oldSliceTotalSize := fs.sliceStatus.SliceTotalSize[fileName]
 	fs.sliceStatus.SliceTotalSize[fileName] = fileSize
-	var sliceInfos []SliceInfo
+	var sliceInfos []Slice
 	var i int64
 	for i = oldSliceTotalSize / sliceSize; i*sliceSize < fileSize; i++ {
 		thisSliceSize := sliceSize
 		if thisSliceSize+i*sliceSize > fileSize {
 			thisSliceSize = fileSize - i*sliceSize
 		}
-		sliceInfo := SliceInfo{
+		sliceInfo := Slice{
 			FileName: fileName,
 			Index:    i,
 			Offset:   i * sliceSize,

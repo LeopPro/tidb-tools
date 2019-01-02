@@ -66,7 +66,7 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	var testFileSize int64 = 678*K + 789
 	sliceInfos, err := fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
-	expectSliceInfos := []SliceInfo{
+	expectSliceInfos := []Slice{
 		{testFileName, 0, 0, 102400},
 		{testFileName, 1, 102400, 102400},
 		{testFileName, 2, 204800, 102400},
@@ -82,7 +82,7 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	testFileSize = 123*K + 456
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
-	expectSliceInfos = []SliceInfo{
+	expectSliceInfos = []Slice{
 		{testFileName, 0, 0, 102400},
 		{testFileName, 1, 102400, 24008},
 	}
@@ -101,7 +101,7 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	testFileSize = 345*K + 321
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
-	expectSliceInfos = []SliceInfo{
+	expectSliceInfos = []Slice{
 		{testFileName, 1, 102400, 102400},
 		{testFileName, 2, 204800, 102400},
 		{testFileName, 3, 307200, 46401},
@@ -116,7 +116,7 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	testFileSize = 456*K + 123
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
-	expectSliceInfos = []SliceInfo{
+	expectSliceInfos = []Slice{
 		{testFileName, 2, 204800, 102400},
 		{testFileName, 3, 307200, 102400},
 		{testFileName, 4, 409600, 57467},

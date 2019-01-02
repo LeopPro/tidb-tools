@@ -19,64 +19,67 @@ func (t *testFileSlicerSuite) TestCheckPoint(c *C) {
 
 	checkPoint, err := loadCheckPoint(dir)
 	c.Assert(err, IsNil)
-	err = checkPoint.logSliceUpload(&SliceInfo{
+	err = checkPoint.logSliceUpload(&Slice{
 		"test1", 0,
 		1024, 1024,
 	}, "hash1", true)
 	c.Assert(err, IsNil)
-	err = checkPoint.logSliceUpload(&SliceInfo{
+	err = checkPoint.logSliceUpload(&Slice{
 		"test1", 1,
 		2048, 1024,
 	}, "hash2", true)
 	c.Assert(err, IsNil)
-	err = checkPoint.logSliceUpload(&SliceInfo{
+	err = checkPoint.logSliceUpload(&Slice{
 		"test2", 0,
 		0, 2048,
 	}, "hash3", true)
 	c.Assert(err, IsNil)
-	err = checkPoint.logSliceUpload(&SliceInfo{
+	err = checkPoint.logSliceUpload(&Slice{
 		"test2", 1,
 		2048, 2048,
 	}, "hash4", true)
 	c.Assert(err, IsNil)
 
-	c.Assert(checkPoint.isSliceUploadSuccessful(&SliceInfo{
+	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
 		"test1", 0,
 		1024, 1024,
 	}), IsTrue)
-	c.Assert(checkPoint.isSliceUploadSuccessful(&SliceInfo{
+	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
 		"test3", 0,
 		1024, 1024,
 	}), IsFalse)
-	c.Assert(checkPoint.isSliceUploadSuccessful(&SliceInfo{
+	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
 		"test2", 0,
 		0, 1024,
 	}), IsFalse)
-	c.Assert(checkPoint.checkHash(&SliceInfo{
+	c.Assert(checkPoint.checkHash(&Slice{
 		"test2", 0,
 		0, 1024,
 	}, "hash3"), IsFalse)
-	c.Assert(checkPoint.checkHash(&SliceInfo{
+	c.Assert(checkPoint.checkHash(&Slice{
 		"test2", 0,
 		0, 2048,
 	}, "hash3"), IsTrue)
 
+	checkPoint, err = loadCheckPoint(dir)
+	c.Assert(err, NotNil)
+
 	checkPointRunning.Set(0)
 	checkPoint, err = loadCheckPoint(dir)
 	c.Assert(err, IsNil)
-	c.Assert(checkPoint.isSliceUploadSuccessful(&SliceInfo{
+	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
 		"test1", 1,
 		2048, 1024,
 	}), IsTrue)
-	c.Assert(checkPoint.isSliceUploadSuccessful(&SliceInfo{
+	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
 		"test2", 0,
 		0, 1024,
 	}), IsFalse)
-	c.Assert(checkPoint.checkHash(&SliceInfo{
+	c.Assert(checkPoint.checkHash(&Slice{
 		"test2", 0,
 		0, 1024,
 	}, "hash3"), IsFalse)
-	c.Assert(checkPoint.checkHash(&SliceInfo{
+	c.Assert(checkPoint.checkHash(&Slice{
 		"test2", 0,
 		0, 2048,
 	}, "hash3"), IsTrue)

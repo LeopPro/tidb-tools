@@ -2,6 +2,7 @@ package file_uploader
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/juju/errors"
 	"github.com/siddontang/go/sync2"
 	"io/ioutil"
@@ -9,24 +10,61 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
-type MultipartUploader struct {
-	workDir string
+type UploadErrorType int
+
+const (
+	FileOrSliceNotExist UploadErrorType = iota + 1
+	SliceAlreadyUpdated
+	SliceUpdatedFailed
+	CheckPointUpdatedFailed
+	SliceHashCalculateFailed
+)
+
+type UploadError struct {
+	Tp      UploadErrorType
+	message string
 }
 
-func (mu *MultipartUploader) upload(si *SliceInfo) error {
-	filePath := filepath.Join(mu.workDir, si.FileName)
-	fileInfo, err := os.Stat(filePath)
-	if err != nil || fileInfo.IsDir() || fileInfo.Size() < si.Offset+si.Length {
-		log.Warnf("file is't exist or slice offset over the file size, FileInfo:%#v SliceInfo %#v", fileInfo, si)
+func (up UploadError) Error() string {
+	return up.message
+}
+
+func NewUploadError(tp UploadErrorType, format string, args ...interface{}) UploadError {
+	return UploadError{tp, fmt.Sprintf(format, args...)}
+}
+
+type MultipartUploader struct {
+	workDir      string
+	checkPoint   *checkPoint
+	fileUploader FileUploaderDriver
+}
+
+func (mu *MultipartUploader) upload(si *Slice) error {
+	if !si.isValid() {
+		return NewUploadError(FileOrSliceNotExist, "file or slice is't exist; Slice %#v", si)
 	}
-	// check log
-	//TODO update with driver and handle error
-	// add status log
-	panic("12")
+	if mu.checkPoint.isSliceUploadSuccessful(si) {
+		hash := mu.fileUploader.Hash()
+		_, err := si.writeTo(hash)
+		if err != nil {
+			return NewUploadError(SliceHashCalculateFailed, "can't calculate the hash of slice; Slice %#v", si)
+		}
+		if mu.checkPoint.checkHash(si, hash.String()) {
+			return NewUploadError(SliceAlreadyUpdated, "slice is already updated; Slice %#v", si)
+		}
+	}
+	hash, err := mu.fileUploader.Upload(si)
+	if err != nil {
+		err := mu.checkPoint.logSliceUpload(si, hash, true)
+		if err != nil {
+			return NewUploadError(CheckPointUpdatedFailed, "checkpoint is updated failed; Slice %#v", si)
+		}
+	} else {
+		return NewUploadError(SliceUpdatedFailed, "slice is updated failed; Slice %#v", si)
+	}
+	return nil
 }
 
 var checkPointRunning sync2.AtomicInt32
@@ -68,7 +106,7 @@ func loadCheckPoint(workDir string) (*checkPoint, error) {
 	return &checkPoint, nil
 }
 
-func (cp *checkPoint) logSliceUpload(si *SliceInfo, hash string, successful bool) error {
+func (cp *checkPoint) logSliceUpload(si *Slice, hash string, successful bool) error {
 	cp.rwLock.Lock()
 	defer cp.rwLock.Unlock()
 	fileCp, exist := cp.status[si.FileName]
@@ -94,7 +132,7 @@ func (cp *checkPoint) logSliceUpload(si *SliceInfo, hash string, successful bool
 	return nil
 }
 
-func (cp *checkPoint) isSliceUploadSuccessful(si *SliceInfo) bool {
+func (cp *checkPoint) isSliceUploadSuccessful(si *Slice) bool {
 	cp.rwLock.RLock()
 	defer cp.rwLock.RUnlock()
 	fileCp, exist := cp.status[si.FileName]
@@ -108,7 +146,7 @@ func (cp *checkPoint) isSliceUploadSuccessful(si *SliceInfo) bool {
 	return indexCp.Uploaded && indexCp.Offset == si.Offset && indexCp.Length == si.Length
 }
 
-func (cp *checkPoint) checkHash(si *SliceInfo, hash string) bool {
+func (cp *checkPoint) checkHash(si *Slice, hash string) bool {
 	cp.rwLock.RLock()
 	defer cp.rwLock.RUnlock()
 	indexCp := cp.status[si.FileName][si.Index]
