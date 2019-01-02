@@ -39,7 +39,7 @@ func (s *Slice) isValid() bool {
 	return true
 }
 
-func (s *Slice) writeTo(writer io.Writer) (n, error) {
+func (s *Slice) writeTo(writer io.Writer) (int64, error) {
 	file, err := os.OpenFile(s.FileName, os.O_RDONLY, 0666)
 	if err != nil {
 		return 0, errors.Annotatef(err, "open file failed %#v", file)
