@@ -116,7 +116,7 @@ func (ss *sliceStatus) flush() error {
 // DoSlice slices `file` and returns Slice Arrays.
 func (fs *FileSlicer) DoSlice(file os.FileInfo) ([]Slice, error) {
 	sliceSize := fs.sliceStatus.SliceSize
-	fileName := filepath.Join(fs.workDir, file.Name())
+	fileName := file.Name()
 	fileSize := file.Size()
 	oldSliceTotalSize := fs.sliceStatus.SliceTotalSize[fileName]
 	fs.sliceStatus.SliceTotalSize[fileName] = fileSize

@@ -55,11 +55,13 @@ func (fh *Md5Base64FileHash) String() string {
 }
 
 type AWSS3FileUploaderDriver struct {
-	s3         *s3.S3
-	bucketName string
+	s3             *s3.S3
+	bucketName     string
+	awsUploadIdSet *awsUploadIdSet
+	remoteDir      string
 }
 
-func NewAWSS3FileUploaderDriver(accessKeyID string, secretAccessKey string, bucketRegion string, bucketName string) (*AWSS3FileUploaderDriver, error) {
+func NewAWSS3FileUploaderDriver(accessKeyID string, secretAccessKey string, bucketRegion string, bucketName string, awsUploadIdSet *awsUploadIdSet, remoteDir string) (*AWSS3FileUploaderDriver, error) {
 	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, "")
 	_, err := creds.Get()
 	if err != nil {
@@ -71,10 +73,19 @@ func NewAWSS3FileUploaderDriver(accessKeyID string, secretAccessKey string, buck
 		return nil, errors.Annotatef(err, "create aws session failed")
 	}
 	s3 := s3.New(session, cfg)
-	return &AWSS3FileUploaderDriver{s3, bucketName}, nil
+	return &AWSS3FileUploaderDriver{s3, bucketName, awsUploadIdSet, remoteDir}, nil
 }
 
 func (fud *AWSS3FileUploaderDriver) Upload(sliceInfo *Slice) (string, error) {
+	key := fmt.Sprintf("%s/%s", fud.remoteDir, sliceInfo.FileName)
+	updateId, exist := fud.awsUploadIdSet.getUploadId(key)
+	if !exist {
+		//TODO create upload
+		// save create id
+	}
+	//TODO upload
+	// save etag
+	// check hash
 	panic("implement me")
 }
 
