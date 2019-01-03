@@ -72,7 +72,7 @@ var checkPointRunning sync2.AtomicInt32
 const CheckPointFile = ".fu_check_point"
 
 type checkPoint struct {
-	status         map[string]map[int64]indexCheckPoint
+	status         map[string]map[int64]*indexCheckPoint
 	rwLock         *sync.RWMutex
 	checkPointFile string
 }
@@ -101,7 +101,7 @@ func loadCheckPoint(workDir string) (*checkPoint, error) {
 			return nil, errors.Annotate(err, "error thrown during unmarshal json")
 		}
 	} else {
-		checkPoint.status = make(map[string]map[int64]indexCheckPoint)
+		checkPoint.status = make(map[string]map[int64]*indexCheckPoint)
 	}
 	return &checkPoint, nil
 }
@@ -111,10 +111,10 @@ func (cp *checkPoint) logSliceUpload(si *Slice, hash string, successful bool) er
 	defer cp.rwLock.Unlock()
 	fileCp, exist := cp.status[si.FileName]
 	if !exist {
-		fileCp = make(map[int64]indexCheckPoint)
+		fileCp = make(map[int64]*indexCheckPoint)
 		cp.status[si.FileName] = fileCp
 	}
-	fileCp[si.Index] = indexCheckPoint{successful, time.Now(), hash, si.Offset, si.Length}
+	fileCp[si.Index] = &indexCheckPoint{successful, time.Now(), hash, si.Offset, si.Length}
 
 	jsonBytes, err := json.Marshal(cp.status)
 	if err != nil {
