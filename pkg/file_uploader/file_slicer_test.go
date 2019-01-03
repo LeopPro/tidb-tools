@@ -3,7 +3,6 @@ package file_uploader
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -64,37 +63,34 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	fileSlicer, err := NewFileSlicer(dir, SliceSize)
 	c.Assert(err, IsNil)
 	testFileName := "test1"
-	testFilePath := filepath.Join(dir, testFileName)
 	var testFileSize int64 = 678*K + 789
 	sliceInfos, err := fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
 	expectSliceInfos := []Slice{
-		{testFilePath, 0, 0, 102400},
-		{testFilePath, 1, 102400, 102400},
-		{testFilePath, 2, 204800, 102400},
-		{testFilePath, 3, 307200, 102400},
-		{testFilePath, 4, 409600, 102400},
-		{testFilePath, 5, 512000, 102400},
-		{testFilePath, 6, 614400, 80661},
+		{testFileName, 0, 0, 102400},
+		{testFileName, 1, 102400, 102400},
+		{testFileName, 2, 204800, 102400},
+		{testFileName, 3, 307200, 102400},
+		{testFileName, 4, 409600, 102400},
+		{testFileName, 5, 512000, 102400},
+		{testFileName, 6, 614400, 80661},
 	}
 	c.Assert(sliceInfos, DeepEquals, expectSliceInfos)
 	c.Assert(sliceInfos[len(sliceInfos)-1].Offset+sliceInfos[len(sliceInfos)-1].Length, Equals, testFileSize)
 
 	testFileName = "test2"
-	testFilePath = filepath.Join(dir, testFileName)
 	testFileSize = 123*K + 456
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
 	expectSliceInfos = []Slice{
-		{testFilePath, 0, 0, 102400},
-		{testFilePath, 1, 102400, 24008},
+		{testFileName, 0, 0, 102400},
+		{testFileName, 1, 102400, 24008},
 	}
 	c.Assert(sliceInfos, DeepEquals, expectSliceInfos)
 	c.Assert(sliceInfos[len(sliceInfos)-1].Offset+sliceInfos[len(sliceInfos)-1].Length, Equals, testFileSize)
 
 	// test file changed
 	testFileName = "test1"
-	testFilePath = filepath.Join(dir, testFileName)
 	testFileSize = 234*K + 345
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
@@ -102,14 +98,13 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	c.Assert(sliceInfos, IsNil)
 
 	testFileName = "test2"
-	testFilePath = filepath.Join(dir, testFileName)
 	testFileSize = 345*K + 321
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
 	expectSliceInfos = []Slice{
-		{testFilePath, 1, 102400, 102400},
-		{testFilePath, 2, 204800, 102400},
-		{testFilePath, 3, 307200, 46401},
+		{testFileName, 1, 102400, 102400},
+		{testFileName, 2, 204800, 102400},
+		{testFileName, 3, 307200, 46401},
 	}
 	c.Assert(sliceInfos, DeepEquals, expectSliceInfos)
 	c.Assert(sliceInfos[len(sliceInfos)-1].Offset+sliceInfos[len(sliceInfos)-1].Length, Equals, testFileSize)
@@ -118,20 +113,18 @@ func (t *testFileSlicerSuite) TestWatcher(c *C) {
 	fileSlicer, err = NewFileSlicer(dir, SliceSize)
 	c.Assert(err, IsNil)
 	testFileName = "test1"
-	testFilePath = filepath.Join(dir, testFileName)
 	testFileSize = 456*K + 123
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)
 	expectSliceInfos = []Slice{
-		{testFilePath, 2, 204800, 102400},
-		{testFilePath, 3, 307200, 102400},
-		{testFilePath, 4, 409600, 57467},
+		{testFileName, 2, 204800, 102400},
+		{testFileName, 3, 307200, 102400},
+		{testFileName, 4, 409600, 57467},
 	}
 	c.Assert(sliceInfos, DeepEquals, expectSliceInfos)
 	c.Assert(sliceInfos[len(sliceInfos)-1].Offset+sliceInfos[len(sliceInfos)-1].Length, Equals, testFileSize)
 
 	testFileName = "test2"
-	testFilePath = filepath.Join(dir, testFileName)
 	testFileSize = 123*K + 321
 	sliceInfos, err = fileSlicer.DoSlice(&MockFileInfo{testFileName, testFileSize})
 	c.Assert(err, IsNil)

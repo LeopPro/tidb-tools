@@ -86,6 +86,7 @@ func (fud *AWSS3FileUploaderDriver) Upload(sliceInfo *Slice) (string, error) {
 	//TODO upload
 	// save etag
 	// check hash
+	print(updateId)
 	panic("implement me")
 }
 
@@ -149,7 +150,7 @@ func (us *awsUploadIdSet) putETag(key string, index int64, eTag string) error {
 	defer us.rwLock.Unlock()
 	item, exist := us.status[key]
 	if !exist {
-		return errors.Errorf("key `%s` isn't exist in awsUploadIdFile")
+		return errors.Errorf("key `%s` isn't exist in awsUploadIdFile", key)
 	}
 	item.ETag[index] = eTag
 	if err := us.save(); err != nil {
