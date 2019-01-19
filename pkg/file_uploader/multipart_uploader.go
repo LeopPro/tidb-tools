@@ -41,6 +41,10 @@ type MultipartUploader struct {
 	fileUploader FileUploaderDriver
 }
 
+func NewMultipartUploader(workDir string, checkPoint *checkPoint, fileUploader FileUploaderDriver) *MultipartUploader {
+	return &MultipartUploader{workDir, checkPoint, fileUploader}
+}
+
 func (mu *MultipartUploader) upload(si *Slice) error {
 	if !si.isValid() {
 		return NewUploadError(FileOrSliceNotExist, "file or slice is't exist; Slice %#v", si)
