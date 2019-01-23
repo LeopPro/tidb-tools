@@ -20,43 +20,52 @@ func (t *testFileSlicerSuite) TestCheckPoint(c *C) {
 	checkPoint, err := loadCheckPoint(dir)
 	c.Assert(err, IsNil)
 	err = checkPoint.logSliceUpload(&Slice{
+		dir,
 		"test1", 0,
 		1024, 1024,
 	}, "hash1", true)
 	c.Assert(err, IsNil)
 	err = checkPoint.logSliceUpload(&Slice{
+		dir,
 		"test1", 1,
 		2048, 1024,
 	}, "hash2", true)
 	c.Assert(err, IsNil)
 	err = checkPoint.logSliceUpload(&Slice{
+		dir,
 		"test2", 0,
 		0, 2048,
 	}, "hash3", true)
 	c.Assert(err, IsNil)
 	err = checkPoint.logSliceUpload(&Slice{
+		dir,
 		"test2", 1,
 		2048, 2048,
 	}, "hash4", true)
 	c.Assert(err, IsNil)
 
 	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
+		dir,
 		"test1", 0,
 		1024, 1024,
 	}), IsTrue)
 	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
+		dir,
 		"test3", 0,
 		1024, 1024,
 	}), IsFalse)
 	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
+		dir,
 		"test2", 0,
 		0, 1024,
 	}), IsFalse)
 	c.Assert(checkPoint.checkHash(&Slice{
+		dir,
 		"test2", 0,
 		0, 1024,
 	}, "hash3"), IsFalse)
 	c.Assert(checkPoint.checkHash(&Slice{
+		dir,
 		"test2", 0,
 		0, 2048,
 	}, "hash3"), IsTrue)
@@ -68,18 +77,22 @@ func (t *testFileSlicerSuite) TestCheckPoint(c *C) {
 	checkPoint, err = loadCheckPoint(dir)
 	c.Assert(err, IsNil)
 	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
+		dir,
 		"test1", 1,
 		2048, 1024,
 	}), IsTrue)
 	c.Assert(checkPoint.isSliceUploadSuccessful(&Slice{
+		dir,
 		"test2", 0,
 		0, 1024,
 	}), IsFalse)
 	c.Assert(checkPoint.checkHash(&Slice{
+		dir,
 		"test2", 0,
 		0, 1024,
 	}, "hash3"), IsFalse)
 	c.Assert(checkPoint.checkHash(&Slice{
+		dir,
 		"test2", 0,
 		0, 2048,
 	}, "hash3"), IsTrue)

@@ -1,6 +1,8 @@
 package file_uploader
 
 import (
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -27,31 +29,35 @@ type FileUploaderDriver interface {
 }
 
 type Md5Base64FileHash struct {
+	h hash.Hash
+}
+
+func NewMd5Base64FileHash() *Md5Base64FileHash {
+	return &Md5Base64FileHash{md5.New()}
 }
 
 func (fh *Md5Base64FileHash) Write(p []byte) (n int, err error) {
-
-	panic("implement me")
+	return fh.h.Write(p)
 }
 
 func (fh *Md5Base64FileHash) Sum(b []byte) []byte {
-	panic("implement me")
+	return fh.h.Sum(b)
 }
 
 func (fh *Md5Base64FileHash) Reset() {
-	panic("implement me")
+	fh.h.Reset()
 }
 
 func (fh *Md5Base64FileHash) Size() int {
-	panic("implement me")
+	return fh.h.Size()
 }
 
 func (fh *Md5Base64FileHash) BlockSize() int {
-	panic("implement me")
+	return fh.h.BlockSize()
 }
 
 func (fh *Md5Base64FileHash) String() string {
-	panic("implement me")
+	return base64.StdEncoding.EncodeToString(fh.Sum(nil))
 }
 
 type AWSS3FileUploaderDriver struct {

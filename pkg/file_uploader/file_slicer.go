@@ -25,6 +25,7 @@ type sliceStatus struct {
 }
 
 type Slice struct {
+	FilePath string
 	FileName string
 	Index    int64
 	Offset   int64
@@ -114,7 +115,7 @@ func (ss *sliceStatus) flush() error {
 }
 
 // DoSlice slices `file` and returns Slice Arrays.
-func (fs *FileSlicer) DoSlice(file os.FileInfo) ([]Slice, error) {
+func (fs *FileSlicer) DoSlice(path string, file os.FileInfo) ([]Slice, error) {
 	sliceSize := fs.sliceStatus.SliceSize
 	fileName := file.Name()
 	fileSize := file.Size()
@@ -128,6 +129,7 @@ func (fs *FileSlicer) DoSlice(file os.FileInfo) ([]Slice, error) {
 			thisSliceSize = fileSize - i*sliceSize
 		}
 		sliceInfo := Slice{
+			FilePath: path,
 			FileName: fileName,
 			Index:    i,
 			Offset:   i * sliceSize,
