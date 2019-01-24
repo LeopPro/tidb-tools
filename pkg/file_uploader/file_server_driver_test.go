@@ -12,16 +12,16 @@ var _ = Suite(&testFileUploader{})
 type testServerDriver struct{}
 
 type MockFileUploaderDriver struct {
+	workDir   string
 	targetDir string
 }
 
-func NewMockFileUploaderDriver(targetDir string) *MockFileUploaderDriver {
-	return &MockFileUploaderDriver{targetDir}
+func NewMockFileUploaderDriver(workDir, targetDir string) *MockFileUploaderDriver {
+	return &MockFileUploaderDriver{workDir, targetDir}
 }
 
 func (m *MockFileUploaderDriver) Upload(sliceInfo *Slice) (string, error) {
-	srcPath := filepath.Join(sliceInfo.FilePath, sliceInfo.FileName)
-	srcFile, err := os.OpenFile(srcPath, os.O_CREATE|os.O_RDWR|os.O_SYNC, 0666)
+	srcFile, err := os.OpenFile(sliceInfo.FilePath, os.O_CREATE|os.O_RDWR|os.O_SYNC, 0666)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -30,7 +30,15 @@ func (m *MockFileUploaderDriver) Upload(sliceInfo *Slice) (string, error) {
 	if err != nil {
 		return "", errors.Trace(err)
 	}
-	targetPath := filepath.Join(sliceInfo.FilePath, sliceInfo.FileName)
+	relPath, err := filepath.Rel(m.workDir, sliceInfo.FilePath)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+	targetPath := filepath.Join(m.targetDir, relPath)
+	err = os.MkdirAll(filepath.Dir(targetPath), 0777)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
 	targetFile, err := os.OpenFile(targetPath, os.O_CREATE|os.O_RDWR|os.O_SYNC, 0666)
 	if err != nil {
 		return "", errors.Trace(err)

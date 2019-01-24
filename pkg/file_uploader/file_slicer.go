@@ -33,7 +33,7 @@ type Slice struct {
 }
 
 func (s *Slice) isValid() bool {
-	fileInfo, err := os.Stat(s.FileName)
+	fileInfo, err := os.Stat(s.FilePath)
 	if err != nil || fileInfo.IsDir() || fileInfo.Size() < s.Offset+s.Length {
 		return false
 	}
@@ -41,7 +41,7 @@ func (s *Slice) isValid() bool {
 }
 
 func (s *Slice) writeTo(writer io.Writer) (int64, error) {
-	file, err := os.OpenFile(s.FileName, os.O_RDONLY, 0666)
+	file, err := os.OpenFile(s.FilePath, os.O_RDONLY, 0666)
 	if err != nil {
 		return 0, errors.Annotatef(err, "open file failed %#v", file)
 	}

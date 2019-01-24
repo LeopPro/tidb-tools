@@ -53,7 +53,7 @@ func (mu *MultipartUploader) upload(si *Slice) error {
 		hash := mu.fileUploader.Hash()
 		_, err := si.writeTo(hash)
 		if err != nil {
-			return NewUploadError(SliceHashCalculateFailed, "can't calculate the hash of slice; Slice %#v", si)
+			return NewUploadError(SliceHashCalculateFailed, "can't calculate the hash of slice; Slice %#v ; Err %#v", si, err)
 		}
 		if mu.checkPoint.checkHash(si, hash.String()) {
 			return NewUploadError(SliceAlreadyUpdated, "slice is already updated; Slice %#v", si)
@@ -61,12 +61,11 @@ func (mu *MultipartUploader) upload(si *Slice) error {
 	}
 	hash, err := mu.fileUploader.Upload(si)
 	if err != nil {
-		err := mu.checkPoint.logSliceUpload(si, hash, true)
-		if err != nil {
-			return NewUploadError(CheckPointUpdatedFailed, "checkpoint is updated failed; Slice %#v", si)
-		}
-	} else {
-		return NewUploadError(SliceUpdatedFailed, "slice is updated failed; Slice %#v", si)
+		return NewUploadError(SliceUpdatedFailed, "slice is updated failed; Slice %#v ; Err %#v", si, err)
+	}
+	err = mu.checkPoint.logSliceUpload(si, hash, true)
+	if err != nil {
+		return NewUploadError(CheckPointUpdatedFailed, "checkpoint is updated failed; Slice %#v", si)
 	}
 	return nil
 }

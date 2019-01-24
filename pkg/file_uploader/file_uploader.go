@@ -18,15 +18,15 @@ import (
 4 test
 */
 type FileUploader struct {
-	workDir      string
-	watcher      *watcher.Watcher
-	slicer       *FileSlicer
-	fileUploader FileUploaderDriver
-	slicesChan   chan *Slice
-	wait         sync.WaitGroup
+	workDir        string
+	watcher        *watcher.Watcher
+	slicer         *FileSlicer
+	uploaderDriver FileUploaderDriver
+	slicesChan     chan Slice
+	wait           sync.WaitGroup
 }
 
-func NewFileUploader(workDir string, workerNum int, slicesSize int64, fileUploader FileUploaderDriver) *FileUploader {
+func NewFileUploader(workDir string, workerNum int, slicesSize int64, uploaderDriver FileUploaderDriver) *FileUploader {
 	watcher := watcher.NewWatcher()
 	err := watcher.Add(workDir)
 	if err != nil {
@@ -37,11 +37,16 @@ func NewFileUploader(workDir string, workerNum int, slicesSize int64, fileUpload
 		log.Errorf("watcher load failure: %#v", err)
 	}
 	fileSlicer, err := NewFileSlicer(workDir, slicesSize)
-	fu := &FileUploader{workDir, watcher, fileSlicer,
-		fileUploader, make(chan *Slice, 64), sync.WaitGroup{}}
-	fu.wait.Add(workerNum)
-	fu.createWorker(workerNum)
+	fu := &FileUploader{
+		workDir:        workDir,
+		watcher:        watcher,
+		slicer:         fileSlicer,
+		uploaderDriver: uploaderDriver,
+		slicesChan:     make(chan Slice, 64),
+	}
 	go fu.process()
+	fu.wait.Add(workerNum + 1)
+	fu.createWorker(workerNum)
 	return fu
 }
 func (fu *FileUploader) createWorker(workerNum int) {
@@ -52,10 +57,13 @@ func (fu *FileUploader) createWorker(workerNum int) {
 	}
 	for i := 0; i < workerNum; i++ {
 		go func() {
-			mu := NewMultipartUploader(fu.workDir, cp, fu.fileUploader)
+			mu := NewMultipartUploader(fu.workDir, cp, fu.uploaderDriver)
 			for slice := range fu.slicesChan {
-				err := mu.upload(slice)
-				log.Errorf("slice %#v upload failure: %#v", slice, err)
+				log.Infof("out slice %#v", slice)
+				err := mu.upload(&slice)
+				if err != nil {
+					log.Errorf("slice %#v upload failure: %#v", slice, err)
+				}
 			}
 			fu.wait.Done()
 		}()
@@ -73,9 +81,11 @@ func (fu *FileUploader) process() {
 		if strings.HasPrefix(info.Name(), ".fu_") {
 			return nil
 		}
+		//log.Errorf("path: %#v info %#v", path, info)
 		slices, err := fu.slicer.DoSlice(path, info)
 		for _, slice := range slices {
-			fu.slicesChan <- &slice
+			log.Infof("slice %#v", slice)
+			fu.slicesChan <- slice
 		}
 		return nil
 	}
@@ -83,23 +93,31 @@ func (fu *FileUploader) process() {
 	if err != nil {
 		log.Errorf("watch workDir failure: %#v", err)
 	}
+loop:
 	for {
 		select {
-		case ev := <-fu.watcher.Events:
+		case ev, opened := <-fu.watcher.Events:
+			if !opened {
+				break loop
+			}
 			if ev.Op != watcher.Create && ev.Op != watcher.Modify {
 				continue
 			}
-			log.Errorf("events: %#v", ev)
+			log.Infof("ev %#v", ev)
 			err := workFunc(ev.Path, ev.FileInfo, nil)
 			if err != nil {
 				log.Errorf("watch workDir failure: %#v", err)
 			}
-		case err2 := <-fu.watcher.Errors:
+		case err2, opened := <-fu.watcher.Errors:
+			if !opened {
+				break loop
+			}
 			if err2 != nil {
 				log.Errorf("watch workDir failure: %#v", err2)
 			}
 		}
 	}
+	fu.wait.Done()
 }
 
 func (fu *FileUploader) WaitAndClose() {
